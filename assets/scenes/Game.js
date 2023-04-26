@@ -1,17 +1,27 @@
+import { SHAPES } from '../../utils.js';
+const { TRIANGLE, SQUARE, DIAMOND } = SHAPES;
+
 export default class Game extends Phaser.Scene {
   constructor() {
     super("game");
   }
 
-  init() {}
+  init() {
+    this.shapesRecolected = {
+      [TRIANGLE]: { count: 0, score: 10 },
+      [SQUARE]: { count: 0, score: 20 },
+      [DIAMOND]: { count: 0, score: 30 },
+    };
+    console.log(this.shapesRecolected)
+  }
 
   preload(){
     this.load.image("sky", "./assets/images/sky.png");
     this.load.image("ground", "./assets/images/platform.png");
     this.load.image("ninja", "./assets/images/ninja.png");
-    this.load.image("square", "./assets/images/square.png");
-    this.load.image("diamond", "./assets/images/diamond.png");
-    this.load.image("triangle", "./assets/images/triangle.png");
+    this.load.image(SQUARE, "./assets/images/square.png");
+    this.load.image(DIAMOND, "./assets/images/diamond.png");
+    this.load.image(TRIANGLE, "./assets/images/triangle.png");
   }
 
   create() {
@@ -29,7 +39,7 @@ export default class Game extends Phaser.Scene {
     // this.shapesGroup.create(300, 0, 'square');
     // create event to add shapes
     this.time.addEvent({
-      delay: 1500,
+      delay: 3000,
       callback: this.addShape,
       callbackScope: this,
       loop: true,
@@ -49,7 +59,14 @@ export default class Game extends Phaser.Scene {
     this.physics.add.collider(this.player, this.shapesGroup);
     this.physics.add.collider(platforms, this.shapesGroup);
 
-    
+    // add overlap between player and shapes
+    this.physics.add.overlap(
+      this.player,
+      this.shapesGroup,
+      this.collectShape, // funcion que llama cuando player choca con shape
+      null, //dejar fijo por ahora
+      this //dejar fijo por ahora
+    );
   }
 
   update() {
@@ -73,14 +90,23 @@ export default class Game extends Phaser.Scene {
 
   addShape() {
     // get random shape
-    const randomShape = Phaser.Math.RND.pick(['diamond', 'square', 'triangle']);
+    const randomShape = Phaser.Math.RND.pick([DIAMOND, SQUARE, TRIANGLE]);
 
     // get random position x
     const randomX = Phaser.Math.RND.between(0, 800);
 
     // add shape to screen
-    this.shapesGroup.create(randomX, 0, randomShape);
-
+    this.shapesGroup.create(randomX, 0, randomShape).setCircle(25, 7, 7);;
     console.log("shape is added", randomX, randomShape);
+  }
+
+  collectShape(player, shape) {
+    // remove shape from screen
+    shape.disableBody(true, true);
+
+    const shapeName = shape.texture.key;
+    this.shapesRecolected[shapeName].count++;
+
+    console.log(this.shapesRecolected);
   }
 }
