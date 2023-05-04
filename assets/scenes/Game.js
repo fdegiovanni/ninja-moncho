@@ -3,26 +3,20 @@ const { TRIANGLE, SQUARE, DIAMOND } = SHAPES;
 
 export default class Game extends Phaser.Scene {
   score;
+  gameOver;
+  timer;
   constructor() {
-    super("game");
+    super("Game");
   }
 
   init() {
+    this.gameOver = false;
     this.shapesRecolected = {
-      [TRIANGLE]: { count: 0, score: 10 },
+      [TRIANGLE]: { count: 0, score: 10},
       [SQUARE]: { count: 0, score: 20 },
       [DIAMOND]: { count: 0, score: 30 },
     };
     console.log(this.shapesRecolected)
-  }
-
-  preload(){
-    this.load.image("sky", "./assets/images/sky.png");
-    this.load.image("ground", "./assets/images/platform.png");
-    this.load.image("ninja", "./assets/images/ninja.png");
-    this.load.image(SQUARE, "./assets/images/square.png");
-    this.load.image(DIAMOND, "./assets/images/diamond.png");
-    this.load.image(TRIANGLE, "./assets/images/triangle.png");
   }
 
   create() {
@@ -42,6 +36,13 @@ export default class Game extends Phaser.Scene {
     this.time.addEvent({
       delay: 3000,
       callback: this.addShape,
+      callbackScope: this,
+      loop: true,
+    });
+
+    this.time.addEvent({
+      delay: 1000,
+      callback: this.onSecond,
       callbackScope: this,
       loop: true,
     });
@@ -68,6 +69,13 @@ export default class Game extends Phaser.Scene {
       null, //dejar fijo por ahora
       this //dejar fijo por ahora
     );
+    this.physics.add.overlap(
+      this.shapesGroup,
+      platforms,
+      this.reduce,
+      null,
+      this
+    );
 
     // add score on scene
     this.score = 0;
@@ -76,9 +84,26 @@ export default class Game extends Phaser.Scene {
       fontStyle: "bold",
       fill: "#FFFFFF",
     });
+
+    // add timer
+    this.timer = 10;
+    this.timerText = this.add.text(750, 20, this.timer, {
+      fontSize: "32px",
+      fontStyle: "bold",
+      fill: "#FFFFFF",
+    });
   }
 
   update() {
+    // condicion para ganar y mostrar escena 
+    if (this.score>200) {
+      this.scene.start("Win");
+    }
+
+    if(this.gameOver){
+      this.scene.start("Win");
+    }
+
     // check if not game over or win
     // update player movement
     if (this.cursors.left.isDown) {
@@ -105,22 +130,45 @@ export default class Game extends Phaser.Scene {
     const randomX = Phaser.Math.RND.between(0, 800);
 
     // add shape to screen
-    this.shapesGroup.create(randomX, 0, randomShape).setCircle(25, 7, 7);;
+    this.shapesGroup.create(randomX, 0, randomShape)
+      .setCircle(25, 7, 7)
+      .setBounce(0, 1)
+      .setData("bounce", 0);
+
     console.log("shape is added", randomX, randomShape);
   }
 
   collectShape(player, shape) {
     // remove shape from screen
     shape.disableBody(true, true);
-
     const shapeName = shape.texture.key;
+
+    const bounce = shape.getData("bounce");
+    const scoreNow = this.shapesRecolected[shapeName].score - bounce;
+
+    
     this.shapesRecolected[shapeName].count++;
 
-    this.score += this.shapesRecolected[shapeName].score;
-    console.log(this.shapesRecolected[shapeName].score)
+    this.score += scoreNow;
+    console.log(scoreNow)
     this.scoreText.setText(`Score: ${this.score.toString()}`);
     
 
     console.log(this.shapesRecolected);
+  }
+
+  onSecond(){
+    this.timer--;
+    this.timerText.setText(this.timer);
+    if(this.timer <= 0){
+      this.gameOver = true;
+    }
+  }
+  reduce(shape, platform){
+    let bounce = shape.getData("bounce");
+    console.log(shape.texture.key, bounce);
+    let sumabounce = bounce + 1;
+    shape.setData("bounce", sumabounce);
+
   }
 }
