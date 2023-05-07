@@ -24,8 +24,8 @@ export default class Game extends Phaser.Scene {
     this.add.image(400, 300, "sky").setScale(0.555);
 
     // add static platforms group
-    let platforms = this.physics.add.staticGroup();
-    platforms.create(400, 568, "ground").setScale(2).refreshBody();
+    this.platforms = this.physics.add.staticGroup();
+    this.platforms.create(400, 568, "ground").setScale(2).refreshBody();
 
     // add shapes group
     this.shapesGroup = this.physics.add.group();
@@ -34,7 +34,7 @@ export default class Game extends Phaser.Scene {
     // this.shapesGroup.create(300, 0, 'square');
     // create event to add shapes
     this.time.addEvent({
-      delay: 3000,
+      delay: 10000,
       callback: this.addShape,
       callbackScope: this,
       loop: true,
@@ -57,9 +57,9 @@ export default class Game extends Phaser.Scene {
     // add collider between player and platforms
     // add collider between player and shapes
     // add overlap between player and shapes
-    this.physics.add.collider(this.player, platforms);
+    this.physics.add.collider(this.player, this.platforms);
     this.physics.add.collider(this.player, this.shapesGroup);
-    this.physics.add.collider(platforms, this.shapesGroup);
+    this.physics.add.collider(this.platforms, this.shapesGroup);
 
     // add overlap between player and shapes
     this.physics.add.overlap(
@@ -68,13 +68,6 @@ export default class Game extends Phaser.Scene {
       this.collectShape, // funcion que llama cuando player choca con shape
       null, //dejar fijo por ahora
       this //dejar fijo por ahora
-    );
-    this.physics.add.overlap(
-      this.shapesGroup,
-      platforms,
-      this.reduce,
-      null,
-      this
     );
 
     // add score on scene
@@ -120,6 +113,27 @@ export default class Game extends Phaser.Scene {
     if (this.cursors.up.isDown && this.player.body.touching.down) {
       this.player.setVelocityY(-330);
     }
+
+
+    // check shapes
+    this.shapesGroup.children.iterate(function(shape) {
+      // Comprobar si el elemento shape está tocando una plataforma
+      if (this.physics.overlap(shape, this.platforms)) {
+        // Restar % valor del elemento shape
+        shape.value -= 0.25;
+
+        const shapeName = shape.texture.key;
+        const percentage = shape.value;
+        const scoreNow = this.shapesRecolected[shapeName].score * percentage;
+        console.log('Valor posible del shape '+shapeName+' '+scoreNow)
+        
+  
+        // Si el valor llega a cero, destruir el elemento shape
+        if (shape.value <= 0) {
+          shape.disableBody(true, true);
+        }
+      }
+    }, this);
   }
 
   addShape() {
@@ -129,11 +143,13 @@ export default class Game extends Phaser.Scene {
     // get random position x
     const randomX = Phaser.Math.RND.between(0, 800);
 
+    const shape = this.physics.add.sprite(randomX, 0, randomShape);
+
     // add shape to screen
-    this.shapesGroup.create(randomX, 0, randomShape)
-      .setCircle(25, 7, 7)
-      .setBounce(0, 1)
-      .setData("bounce", 0);
+    this.shapesGroup.add(shape);
+    shape.setBounce(0.75);
+    shape.value = 1;
+    shape.setCircle(32, 0, 0);
 
     console.log("shape is added", randomX, randomShape);
   }
@@ -143,8 +159,8 @@ export default class Game extends Phaser.Scene {
     shape.disableBody(true, true);
     const shapeName = shape.texture.key;
 
-    const bounce = shape.getData("bounce");
-    const scoreNow = this.shapesRecolected[shapeName].score - bounce;
+    const percentage = shape.value;
+    const scoreNow = this.shapesRecolected[shapeName].score * percentage;
 
     
     this.shapesRecolected[shapeName].count++;
@@ -161,14 +177,8 @@ export default class Game extends Phaser.Scene {
     this.timer--;
     this.timerText.setText(this.timer);
     if(this.timer <= 0){
-      this.gameOver = true;
+      // this.gameOver = true;
     }
   }
-  reduce(shape, platform){
-    let bounce = shape.getData("bounce");
-    console.log(shape.texture.key, bounce);
-    let sumabounce = bounce + 1;
-    shape.setData("bounce", sumabounce);
-
-  }
+  
 }
