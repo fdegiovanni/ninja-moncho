@@ -1,4 +1,4 @@
-import { SHAPES } from '../../utils.js';
+import { SHAPES, POINTS_PERCENTAGE, POINTS_PERCENTAGE_VALUE_START } from '../../utils.js';
 const { TRIANGLE, SQUARE, DIAMOND } = SHAPES;
 
 export default class Game extends Phaser.Scene {
@@ -95,16 +95,16 @@ export default class Game extends Phaser.Scene {
   }
 
   update() {
-    // condicion para ganar y mostrar escena 
+    // the player has won the game
     if (this.score>200) {
       this.scene.start("Win");
     }
 
+    // the player has lost the game
     if(this.gameOver){
-      this.scene.start("Win");
+      // this.scene.start("GameOver");
     }
 
-    // check if not game over or win
     // update player movement
     if (this.cursors.left.isDown) {
       this.player.setVelocityX(-250);
@@ -122,6 +122,10 @@ export default class Game extends Phaser.Scene {
     }
   }
 
+  /**
+   * This function adds a randomly selected shape to the screen with a random x position, sets its
+   * properties, and logs a message.
+   */
   addShape() {
     // get random shape
     const randomShape = Phaser.Math.RND.pick([DIAMOND, SQUARE, TRIANGLE]);
@@ -131,30 +135,27 @@ export default class Game extends Phaser.Scene {
 
     // add shape to screen
     this.shapesGroup.create(randomX, 0, randomShape)
-      .setCircle(25, 7, 7)
-      .setBounce(0, 1)
-      .setData("bounce", 0);
+      .setCircle(32, 0, 0)
+      .setBounce(0.8)
+      .setData(POINTS_PERCENTAGE, POINTS_PERCENTAGE_VALUE_START);
 
     console.log("shape is added", randomX, randomShape);
   }
 
+  /**
+   * This function collects a shape, updates the player's score, and increments the count of the
+   * collected shape.
+  */
   collectShape(player, shape) {
-    // remove shape from screen
     shape.disableBody(true, true);
+
     const shapeName = shape.texture.key;
-
-    const bounce = shape.getData("bounce");
-    const scoreNow = this.shapesRecolected[shapeName].score - bounce;
-
-    
-    this.shapesRecolected[shapeName].count++;
-
+    const percentage = shape.getData(POINTS_PERCENTAGE);
+    const scoreNow = this.shapesRecolected[shapeName].score * percentage;
     this.score += scoreNow;
-    console.log(scoreNow)
     this.scoreText.setText(`Score: ${this.score.toString()}`);
     
-
-    console.log(this.shapesRecolected);
+    this.shapesRecolected[shapeName].count++;
   }
 
   onSecond(){
@@ -164,11 +165,28 @@ export default class Game extends Phaser.Scene {
       this.gameOver = true;
     }
   }
-  reduce(shape, platform){
-    let bounce = shape.getData("bounce");
-    console.log(shape.texture.key, bounce);
-    let sumabounce = bounce + 1;
-    shape.setData("bounce", sumabounce);
 
+  /**
+   * The reduce function decreases the percentage of points for a given shape and disables it if the
+   * percentage reaches zero, while also displaying a text indicating the reduction.
+   */
+  reduce(shape, platform){
+    const newPercentage = shape.getData(POINTS_PERCENTAGE) - 0.25;
+    console.log(shape.texture.key, newPercentage);
+    shape.setData(POINTS_PERCENTAGE, newPercentage);
+    if (newPercentage <= 0) {
+      shape.disableBody(true, true);
+      return;
+    }
+
+    // show text
+    const text = this.add.text(shape.body.position.x+10, shape.body.position.y, "- 25%", {
+      fontSize: "22px",
+      fontStyle: "bold",
+      fill: "red",
+    });
+    setTimeout(() => {
+      text.destroy();
+    }, 200);
   }
 }
